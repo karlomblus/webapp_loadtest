@@ -54,7 +54,11 @@ def load_requests(filename="request.txt"):
             reqs.append((method, path, headers, body))
     return reqs
 
-
+def work_time():
+    elapsed_time = time.time() - start_time
+    hours, remainder = divmod(elapsed_time, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return(f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}')
 
 def user_worker(
     user_id,
@@ -85,7 +89,7 @@ def user_worker(
                 else:
                     r = session.post(url, headers=headers, data=body)
 
-                print(user_id, method, path, r.status_code)
+                print(work_time(),user_id, method, path, r.status_code)
                 
                 if r.status_code!=200:
                     print("VIGA!!")
@@ -110,6 +114,7 @@ def main():
 
     rate_limiter = RateLimiter(args.n)
     stop_time = time.time() + args.t
+    start_time = time.time()
 
     threads = []
 
