@@ -64,12 +64,29 @@ def work_time():
     return f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
 
 
+def do_request():
+    global total_requests,total_duration
+    start = time.perf_counter()
+    if method == "GET":
+        r = session.get(url, headers=headers)
+    else:
+        r = session.post(url, headers=headers, data=body)
+    duration = time.perf_counter() - start
+    print(work_time(),user_id, method, path, r.status_code)
+
+    with stats_lock:
+                    total_requests += 1
+                    total_duration += duration
+                
+    if r.status_code!=200:
+       print("VIGA!!")
+       print("Request: ",method," ",path,"\nHeader:",headers,"\n"+body+"\n"+ r.text+"\n")
 
 
 def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data,    rate_limiter,    stop_time,    verify_ssl,):
     session = requests.Session()
     session.verify = verify_ssl
-    global total_requests,total_duration
+    
     if not session.verify: # kui oleme kontrolli välja lülitanud, ei taha hoiatusi ka
         warnings.filterwarnings('ignore', message='Unverified HTTPS request')
     
@@ -85,21 +102,7 @@ def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data
             
 
             try:
-                start = time.perf_counter()
-                if method == "GET":
-                    r = session.get(url, headers=headers)
-                else:
-                    r = session.post(url, headers=headers, data=body)
-                duration = time.perf_counter() - start
-                print(work_time(),user_id, method, path, r.status_code)
-
-                with stats_lock:
-                    total_requests += 1
-                    total_duration += duration
-                
-                if r.status_code!=200:
-                    print("VIGA!!")
-                    print("Request: ",method," ",path,"\nHeader:",headers,"\n"+body+"\n"+ r.text+"\n")
+                do_request()
 
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
