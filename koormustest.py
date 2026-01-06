@@ -51,11 +51,15 @@ def load_requests(filename="request.txt"):
             if not line or line.startswith("#"):
                 continue
 
-            parts = line.split(maxsplit=3)
+            parts = line.split(maxsplit=2) # jagame kolmeks jupiks  METHOD, PATH, ÜLEJÄÄNUD
+
             method = parts[0].upper()
             path = parts[1]
-            headers = ast.literal_eval(parts[2]) if len(parts) > 2 else {}
-            body = parts[3] if len(parts) > 3 else None
+            # kuna header on ainult ühekihiline json, siis post data splitime selle järgi
+            parts2=parts[2].split('} ', maxsplit=1)
+
+            headers = ast.literal_eval(parts2[0]) if len(parts2) > 0 else {}
+            body = parts2[1] if len(parts2) > 1 else None
 
             reqs.append((method, path, headers, body))
     return reqs
