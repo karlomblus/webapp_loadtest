@@ -113,7 +113,6 @@ def user_worker(
 
 def stats_printer(stop_time):
     global start_time
-    elapsed_time = time.time() - start_time
     while time.time() < stop_time:
         time.sleep(10)
 
@@ -121,10 +120,12 @@ def stats_printer(stop_time):
             if total_requests == 0:
                 continue
             avg = total_duration / total_requests
+            elapsed_time = time.time() - start_time
+            avg2= elapsed_time / total_requests
 
         print(
             f"[STATS] requests={total_requests}, "
-            f"avg_duration_ms={avg*1000:.2f}"
+            f"avg_duration_ms={avg*1000:.2f}, total avg={avg2:.2f} req/s"
         )
 
 
@@ -170,7 +171,9 @@ def main():
 
     with stats_lock:
         avg = (total_duration / total_requests) if total_requests else 0
-        print(    f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg*1000:.2f}")
+        avg2= elapsed_time / total_requests
+        elapsed_time = time.time() - start_time # kogu programmi tööaeg
+        print(    f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg*1000:.2f}, total avg={avg2:.2f} req/s")
 
 if __name__ == "__main__":
     main()
