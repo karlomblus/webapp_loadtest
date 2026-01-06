@@ -37,7 +37,7 @@ class RateLimiter:
             self.last = time.time()
 
 
-def load_requests(filename="request.txt"):
+def load_requests(filename):
     reqs = []
     with open(filename, "r", encoding="utf-8") as f:
         for line in f:
@@ -63,14 +63,7 @@ def work_time():
     minutes, seconds = divmod(remainder, 60)
     return f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
 
-def user_worker(
-    user_id,
-    base_url,
-    requests_data,
-    rate_limiter,
-    stop_time,
-    verify_ssl,
-):
+def user_worker(    user_id,    base_url,    requests_data,    rate_limiter,    stop_time,    verify_ssl,):
     session = requests.Session()
     session.verify = verify_ssl
     global total_requests,total_duration
@@ -133,7 +126,10 @@ def stats_printer(stop_time):
 def main():
     args = parse_args()
 
-    requests_data = load_requests()
+    startup_requests_data = load_requests("startup_requests.txt")
+    if not startup_requests_data:
+        raise RuntimeError("startup_requests.txt on tühi")
+    requests_data = load_requests("request.txt")
     if not requests_data:
         raise RuntimeError("request.txt on tühi")
 
@@ -150,6 +146,7 @@ def main():
             args=(
                 i,
                 args.u.rstrip("/"),
+                startup_requests_data,
                 requests_data,
                 rate_limiter,
                 stop_time,
