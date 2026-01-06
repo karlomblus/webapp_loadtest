@@ -77,11 +77,7 @@ def user_worker(
     session.verify = verify_ssl
 
     try:
-        # ---- LOGIN FLOW (näidis) ----
-        session.get(f"{base_url}/login")
-        session.post(
-            f"{base_url}/login",
-            data={"username": f"user{user_id}", "password": "password"},
+        session.post(f"{base_url}/rkvr/auth/devlogin/login",     data={"48806260018"},
         )
 
         while time.time() < stop_time:
@@ -96,8 +92,7 @@ def user_worker(
                 else:
                     r = session.post(url, headers=headers, data=body)
 
-                # vajadusel:
-                # print(user_id, method, path, r.status_code)
+                print(user_id, method, path, r.status_code)
 
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
