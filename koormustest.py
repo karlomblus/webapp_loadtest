@@ -63,7 +63,10 @@ def work_time():
     minutes, seconds = divmod(remainder, 60)
     return f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
 
-def user_worker(    user_id,    base_url,    requests_data,    rate_limiter,    stop_time,    verify_ssl,):
+
+
+
+def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data,    rate_limiter,    stop_time,    verify_ssl,):
     session = requests.Session()
     session.verify = verify_ssl
     global total_requests,total_duration
@@ -72,7 +75,7 @@ def user_worker(    user_id,    base_url,    requests_data,    rate_limiter,    
     
 
     try:
-        session.post(f"{base_url}/rkvr/auth/devlogin/login",     data={"48806260018"},     )
+        #TODO: startup
 
         while time.time() < stop_time:
             method, path, headers, body = random.choice(requests_data)
