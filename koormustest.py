@@ -50,10 +50,9 @@ def load_requests(filename="request.txt"):
             path = parts[1]
             # kuna header on ainult ühekihiline json, siis post data splitime selle järgi
             parts2=parts[2].split('}', maxsplit=1)
-            print(parts2)
             headers = ast.literal_eval(parts2[0]+'}') if len(parts2) > 0 else {}
             body = parts2[1][1:] if len(parts2) > 1 else None
-            print("Parsime requesti: ",method," ",path,"\nHeader:",headers,"\n'",body,"'\n\n")
+            #print("Parsime requesti: ",method," ",path,"\nHeader:",headers,"\n'",body,"'\n\n")
             reqs.append((method, path, headers, body))
     return reqs
 
@@ -113,6 +112,8 @@ def user_worker(
         session.close()
 
 def stats_printer(stop_time):
+    global start_time
+    elapsed_time = time.time() - start_time
     while time.time() < stop_time:
         time.sleep(10)
 
