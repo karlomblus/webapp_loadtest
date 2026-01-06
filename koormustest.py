@@ -47,9 +47,12 @@ def load_requests(filename="request.txt"):
             path = parts[1]
             # kuna header on ainult ühekihiline json, siis post data splitime selle järgi
             parts2=parts[2].split('}', maxsplit=1)
+            print(parts2)
             headers = ast.literal_eval(parts2[0]+'}') if len(parts2) > 0 else {}
             body = parts2[1] if len(parts2) > 1 else None
-            print("Parsime requesti: ",method," ",path,"\nHeader:",headers,"\n",body,"\n\n")
+            print(parts2[1])
+            print(parts2[1][1:])
+            print("Parsime requesti: ",method," ",path,"\nHeader:",headers,"\n'",body,"'\n\n")
             reqs.append((method, path, headers, body))
     return reqs
 
@@ -65,18 +68,18 @@ def user_worker(
 ):
     session = requests.Session()
     session.verify = verify_ssl
-    if not session.verify: # kui oleme kontrolli välja lülitanud, ei taha vig
+    if not session.verify: # kui oleme kontrolli välja lülitanud, ei taha hoiatusi ka
         warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
     try:
-        session.post(f"{base_url}/rkvr/auth/devlogin/login",     data={"48806260018"},
-        )
+        session.post(f"{base_url}/rkvr/auth/devlogin/login",     data={"48806260018"},     )
 
         while time.time() < stop_time:
             method, path, headers, body = random.choice(requests_data)
             url = base_url + path
 
             rate_limiter.wait()
+            print("Request: ",method," ",path,"\nHeader:",headers,"\n",body,"\n")
 
             try:
                 if method == "GET":
@@ -85,6 +88,7 @@ def user_worker(
                     r = session.post(url, headers=headers, data=body)
 
                 print(user_id, method, path, r.status_code)
+                print(r)
 
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
