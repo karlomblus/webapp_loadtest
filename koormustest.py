@@ -52,15 +52,14 @@ def load_requests(filename="request.txt"):
                 continue
 
             parts = line.split(maxsplit=2) # jagame kolmeks jupiks  METHOD, PATH, ÜLEJÄÄNUD
-
             method = parts[0].upper()
             path = parts[1]
             # kuna header on ainult ühekihiline json, siis post data splitime selle järgi
             parts2=parts[2].split('} ', maxsplit=1)
-
-            headers = ast.literal_eval(parts2[0]) if len(parts2) > 0 else {}
+            print("Headerdebug: ",parts2[0])
+            headers = ast.literal_eval(parts2[0]+'}') if len(parts2) > 0 else {}
             body = parts2[1] if len(parts2) > 1 else None
-
+            print("Parsime requesti: ",method," ",path,"\nHeader:",headers,"\n",body,"\n\n")
             reqs.append((method, path, headers, body))
     return reqs
 
