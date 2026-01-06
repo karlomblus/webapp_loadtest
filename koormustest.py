@@ -103,7 +103,7 @@ def user_worker(
                 
                 if r.status_code!=200:
                     print("VIGA!!")
-                    print("Request: ",method," ",path,"\nHeader:",headers,"\n",body,"\n")
+                    print("Request: ",method," ",path,"\nHeader:",headers,"\n"+body+"\n"+ response.text+"\n")
 
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
@@ -121,11 +121,11 @@ def stats_printer(stop_time):
                 continue
             avg = total_duration / total_requests
             elapsed_time = time.time() - start_time
-            avg2= elapsed_time / total_requests
+            avg2=  total_requests/elapsed_time
 
         print(
             f"[STATS] requests={total_requests}, "
-            f"avg_duration_ms={avg*1000:.2f}, total avg={avg2:.2f} req/s"
+            f"avg_duration_ms={avg*1000:.2f}, total avg={avg2:.1f} req/s"
         )
 
 
@@ -171,9 +171,9 @@ def main():
 
     with stats_lock:
         avg = (total_duration / total_requests) if total_requests else 0
-        avg2= elapsed_time / total_requests
         elapsed_time = time.time() - start_time # kogu programmi tööaeg
-        print(    f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg*1000:.2f}, total avg={avg2:.2f} req/s")
+        avg2= total_requests/elapsed_time
+        print(    f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg*1000:.2f}, total avg={avg2:.1f} req/s")
 
 if __name__ == "__main__":
     main()
