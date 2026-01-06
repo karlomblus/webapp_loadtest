@@ -64,7 +64,7 @@ def work_time():
     return f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
 
 
-def do_request():
+def do_request(session,user_id,url,method,path,headers,body):
     global total_requests,total_duration
     start = time.perf_counter()
     if method == "GET":
@@ -75,12 +75,12 @@ def do_request():
     print(work_time(),user_id, method, path, r.status_code)
 
     with stats_lock:
-                    total_requests += 1
-                    total_duration += duration
+        total_requests += 1
+        total_duration += duration
                 
     if r.status_code!=200:
-       print("VIGA!!")
-       print("Request: ",method," ",path,"\nHeader:",headers,"\n"+body+"\n"+ r.text+"\n")
+        print("VIGA!!")
+        print("Request: ",method," ",path,"\nHeader:",headers,"\n"+body+"\n"+ r.text+"\n")
 
 
 def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data,    rate_limiter,    stop_time,    verify_ssl,):
@@ -102,7 +102,7 @@ def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data
             
 
             try:
-                do_request()
+                do_request(session,user_id,url,method,path,headers,body)
 
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
