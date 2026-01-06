@@ -74,9 +74,10 @@ def user_worker(
 ):
     session = requests.Session()
     session.verify = verify_ssl
+    global total_requests,total_duration
     if not session.verify: # kui oleme kontrolli välja lülitanud, ei taha hoiatusi ka
         warnings.filterwarnings('ignore', message='Unverified HTTPS request')
-    start = time.perf_counter()
+    
 
     try:
         session.post(f"{base_url}/rkvr/auth/devlogin/login",     data={"48806260018"},     )
@@ -89,6 +90,7 @@ def user_worker(
             
 
             try:
+                start = time.perf_counter()
                 if method == "GET":
                     r = session.get(url, headers=headers)
                 else:
@@ -98,7 +100,7 @@ def user_worker(
 
                 with stats_lock:
                     total_requests += 1
-                    total_duration += duratio
+                    total_duration += duration
                 
                 if r.status_code!=200:
                     print("VIGA!!")
@@ -166,13 +168,8 @@ def main():
 
 
     with stats_lock:
-    avg = (total_duration / total_requests) if total_requests else 0
-
-print(
-    "\n[FINAL STATS] "
-    f"requests={total_requests}, "
-    f"avg_duration_ms={avg*1000:.2f}"
-)
+        avg = (total_duration / total_requests) if total_requests else 0
+        print(    f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg*1000:.2f}")
 
 if __name__ == "__main__":
     main()
