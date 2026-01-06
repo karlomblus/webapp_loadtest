@@ -5,10 +5,9 @@ import random
 import requests
 import ast
 from queue import Queue
+import warnings
 
-# -------------------------------
-# CLI
-# -------------------------------
+
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -19,10 +18,6 @@ def parse_args():
     p.add_argument("-k", action="store_true", help="Ignoreeri SSL vigu")
     return p.parse_args()
 
-
-# -------------------------------
-# Rate limiter (globaalne)
-# -------------------------------
 
 class RateLimiter:
     def __init__(self, rate_per_sec):
@@ -39,10 +34,6 @@ class RateLimiter:
             self.last = time.time()
 
 
-# -------------------------------
-# Requestide laadimine
-# -------------------------------
-
 def load_requests(filename="request.txt"):
     reqs = []
     with open(filename, "r", encoding="utf-8") as f:
@@ -55,8 +46,7 @@ def load_requests(filename="request.txt"):
             method = parts[0].upper()
             path = parts[1]
             # kuna header on ainult ühekihiline json, siis post data splitime selle järgi
-            parts2=parts[2].split('} ', maxsplit=1)
-            print("Headerdebug: ",parts2[0])
+            parts2=parts[2].split('}', maxsplit=1)
             headers = ast.literal_eval(parts2[0]+'}') if len(parts2) > 0 else {}
             body = parts2[1] if len(parts2) > 1 else None
             print("Parsime requesti: ",method," ",path,"\nHeader:",headers,"\n",body,"\n\n")
@@ -64,9 +54,6 @@ def load_requests(filename="request.txt"):
     return reqs
 
 
-# -------------------------------
-# Kasutaja tööloogika
-# -------------------------------
 
 def user_worker(
     user_id,
@@ -78,6 +65,8 @@ def user_worker(
 ):
     session = requests.Session()
     session.verify = verify_ssl
+    if not session.verify: # kui oleme kontrolli välja lülitanud, ei taha vig
+        warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
     try:
         session.post(f"{base_url}/rkvr/auth/devlogin/login",     data={"48806260018"},
@@ -104,9 +93,7 @@ def user_worker(
         session.close()
 
 
-# -------------------------------
-# Main
-# -------------------------------
+
 
 def main():
     args = parse_args()
@@ -114,6 +101,7 @@ def main():
     requests_data = load_requests()
     if not requests_data:
         raise RuntimeError("request.txt on tühi")
+
 
     rate_limiter = RateLimiter(args.n)
     stop_time = time.time() + args.t
