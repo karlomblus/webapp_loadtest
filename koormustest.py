@@ -103,7 +103,7 @@ def user_worker(
                 
                 if r.status_code!=200:
                     print("VIGA!!")
-                    print("Request: ",method," ",path,"\nHeader:",headers,"\n"+body+"\n"+ response.text+"\n")
+                    print("Request: ",method," ",path,"\nHeader:",headers,"\n"+body+"\n"+ r.text+"\n")
 
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
