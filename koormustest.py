@@ -28,11 +28,13 @@ class RateLimiter:
         self.lock = threading.Lock()
         self.last = 0.0
 
-    def wait(self):
+    def wait(self,maxsleep):
         with self.lock:
             now = time.time()
             delta = now - self.last
             if delta < self.interval:
+                sleeptime=self.interval - delta
+                if (sleeptime>maxsleep): sleeptime=maxsleep 
                 time.sleep(self.interval - delta)
             self.last = time.time()
 
@@ -44,7 +46,8 @@ def load_requests(filename):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-
+            
+            print("Parsime requesti rida: ",line)
             parts = line.split(maxsplit=2) # jagame kolmeks jupiks  METHOD, PATH, ÜLEJÄÄNUD
             method = parts[0].upper()
             path = parts[1]
@@ -97,22 +100,18 @@ def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data
         while time.time() < stop_time:
             method, path, headers, body = random.choice(requests_data)
             url = base_url + path
-
-            rate_limiter.wait()
-            
-
             try:
                 do_request(session,user_id,url,method,path,headers,body)
-
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
+            rate_limiter.wait(stop_time-time.time())
 
     finally:
         session.close()
 
 def stats_printer(stop_time):
     global start_time
-    while time.time() < stop_time:
+    while time.time() < stop_time and (stop_time-time.time())>10:
         time.sleep(10)
 
         with stats_lock:
