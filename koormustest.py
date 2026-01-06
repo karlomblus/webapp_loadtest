@@ -156,9 +156,23 @@ def main():
         t.start()
         threads.append(t)
 
+    stats_thread = threading.Thread(     target=stats_printer,      args=(stop_time,),     daemon=True,)
+    stats_thread.start()
+
+
     for t in threads:
         t.join()
 
+
+
+    with stats_lock:
+    avg = (total_duration / total_requests) if total_requests else 0
+
+print(
+    "\n[FINAL STATS] "
+    f"requests={total_requests}, "
+    f"avg_duration_ms={avg*1000:.2f}"
+)
 
 if __name__ == "__main__":
     main()
