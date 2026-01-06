@@ -49,9 +49,7 @@ def load_requests(filename="request.txt"):
             parts2=parts[2].split('}', maxsplit=1)
             print(parts2)
             headers = ast.literal_eval(parts2[0]+'}') if len(parts2) > 0 else {}
-            body = parts2[1] if len(parts2) > 1 else None
-            print(parts2[1])
-            print(parts2[1][1:])
+            body = parts2[1][1:] if len(parts2) > 1 else None
             print("Parsime requesti: ",method," ",path,"\nHeader:",headers,"\n'",body,"'\n\n")
             reqs.append((method, path, headers, body))
     return reqs
@@ -79,7 +77,7 @@ def user_worker(
             url = base_url + path
 
             rate_limiter.wait()
-            print("Request: ",method," ",path,"\nHeader:",headers,"\n",body,"\n")
+            
 
             try:
                 if method == "GET":
@@ -88,7 +86,10 @@ def user_worker(
                     r = session.post(url, headers=headers, data=body)
 
                 print(user_id, method, path, r.status_code)
-                print(r)
+                
+                if r.status_code!=200:
+                    print("VIGA!!")
+                    print("Request: ",method," ",path,"\nHeader:",headers,"\n",body,"\n")
 
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
