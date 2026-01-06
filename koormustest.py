@@ -7,7 +7,10 @@ import ast
 from queue import Queue
 import warnings
 
-
+start_time = time.time()
+stats_lock = threading.Lock()
+total_requests = 0
+total_duration = 0.0  # sekundites
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -55,10 +58,11 @@ def load_requests(filename="request.txt"):
     return reqs
 
 def work_time():
+    global start_time
     elapsed_time = time.time() - start_time
     hours, remainder = divmod(elapsed_time, 3600)
     minutes, seconds = divmod(remainder, 60)
-    return(f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}')
+    return f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
 
 def user_worker(
     user_id,
@@ -72,6 +76,7 @@ def user_worker(
     session.verify = verify_ssl
     if not session.verify: # kui oleme kontrolli välja lülitanud, ei taha hoiatusi ka
         warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+    start = time.perf_counter()
 
     try:
         session.post(f"{base_url}/rkvr/auth/devlogin/login",     data={"48806260018"},     )
@@ -88,8 +93,12 @@ def user_worker(
                     r = session.get(url, headers=headers)
                 else:
                     r = session.post(url, headers=headers, data=body)
-
+                duration = time.perf_counter() - start
                 print(work_time(),user_id, method, path, r.status_code)
+
+                with stats_lock:
+                    total_requests += 1
+                    total_duration += duratio
                 
                 if r.status_code!=200:
                     print("VIGA!!")
@@ -101,6 +110,19 @@ def user_worker(
     finally:
         session.close()
 
+def stats_printer(stop_time):
+    while time.time() < stop_time:
+        time.sleep(10)
+
+        with stats_lock:
+            if total_requests == 0:
+                continue
+            avg = total_duration / total_requests
+
+        print(
+            f"[STATS] requests={total_requests}, "
+            f"avg_duration_ms={avg*1000:.2f}"
+        )
 
 
 
@@ -114,7 +136,7 @@ def main():
 
     rate_limiter = RateLimiter(args.n)
     stop_time = time.time() + args.t
-    start_time = time.time()
+    
 
     threads = []
 
