@@ -149,15 +149,7 @@ def main():
     for i in range(args.c):
         t = threading.Thread(
             target=user_worker,
-            args=(
-                i,
-                args.u.rstrip("/"),
-                startup_requests_data,
-                requests_data,
-                rate_limiter,
-                stop_time,
-                not args.k,
-            ),
+            args=( i, args.u.rstrip("/"),  startup_requests_data,    requests_data,   rate_limiter,   stop_time,  not args.k,      ),
             daemon=True,
         )
         t.start()
