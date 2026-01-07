@@ -1,6 +1,8 @@
 # webapp_loadtest
 Creating a load on the web application
 
+mitte benchmark vaid pigem tavalise kasutajakoormuse simuleerimine
+
 
 
 # Kasutus
