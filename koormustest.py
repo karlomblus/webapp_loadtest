@@ -31,39 +31,30 @@ class RateLimiter:
         self.next_time = time.monotonic()  # järgmise lubatud päringu aeg
 
     def wait(self, stop_time,debugdata):
-        print(debugdata,f"ratelimiter alustab runtime_left={stop_time-time.time()}")
+        #print(debugdata,f"ratelimiter alustab runtime_left={stop_time-time.time()}")
         now = time.monotonic()
         timeout = max(0, stop_time - now)
         acquired = self.lock.acquire(timeout=timeout)
         if not acquired:
-            print(debugdata,f"ratelimiter loobub luku ootamisest runtime_left={stop_time-time.time()}")
+            #print(debugdata,f"ratelimiter loobub luku ootamisest runtime_left={stop_time-time.time()}")
             return False  # ei saanud lukku, aeg läbi
-        #with self.lock:
         try:
-            print(debugdata,f"ratelimiter sai luku runtime_left={stop_time-time.time()}")
-
+            #print(debugdata,f"ratelimiter sai luku runtime_left={stop_time-time.time()}")
             if stop_time<time.time():
-                print(debugdata,f"ratelimiter loobub runtime_left={stop_time-time.time()}")
+                #print(debugdata,f"ratelimiter loobub runtime_left={stop_time-time.time()}")
                 return False
-
-
             now = time.monotonic()
-
             # kui järgmine slot on juba möödas, tee kohe
             if now >= self.next_time:
                 self.next_time = now + self.interval
-                print(debugdata,f"ratelimiter: tee kohe runtime_left={stop_time-time.time()}")
-                return now < stop_time
+                #print(debugdata,f"ratelimiter: tee kohe runtime_left={stop_time-time.time()}")
+                return True
 
             # kui järgmine slot on tulevikus
             sleep_time = self.next_time - now
 
-            # ära maga üle deadlineni
-            if now + sleep_time > stop_time:
-                print(debugdata,f"ratelimite: stop_time runtime_left={stop_time-time.time()}")
-                return False
 
-            print(debugdata,f"ratelimite: sleebin {sleep_time} runtime_left={stop_time-time.time()}")
+            #print(debugdata,f"ratelimite: sleebin {sleep_time} runtime_left={stop_time-time.time()}")
             time.sleep(sleep_time)
             self.next_time += self.interval
             return True
