@@ -53,7 +53,6 @@ class RateLimiter:
             # kui järgmine slot on tulevikus
             sleep_time = self.next_time - now
 
-
             #print(debugdata,f"ratelimite: sleebin {sleep_time} runtime_left={stop_time-time.time()}")
             time.sleep(sleep_time)
             self.next_time += self.interval
@@ -111,7 +110,7 @@ def do_request(session,user_id,url,method,path,headers,body):
 
 
 def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data,    rate_limiter,    stop_time,    verify_ssl,):
-    print(work_time(), f"[User {user_id}] start")
+    #print(work_time(), f"[User {user_id}] start")
     session = requests.Session()
     session.verify = verify_ssl
     
@@ -123,7 +122,7 @@ def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data
         #TODO: startup
 
         while time.time() < stop_time:
-            print(work_time(), f"[User {user_id}] runtime left: stop_time-time=",(stop_time-time.time()))
+            #print(work_time(), f"[User {user_id}] runtime left: stop_time-time=",(stop_time-time.time()))
             #print("runtime left: stop_time-time=",(stop_time-time.time()))
             #rate_limiter.wait(stop_time-time.time()) # rate limit peab olema alguses, muidu teeb iga kasutaja kohe esimese päringu ära
             #if time.time() > stop_time:
@@ -132,10 +131,8 @@ def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data
             now = time.monotonic()
             if now >= stop_time:
                 break
-            print(work_time(), f"[User {user_id}] pollib ratelimiteri")
             if not rate_limiter.wait(stop_time,(work_time()+ f" [User {user_id}]")):
                 break
-            print(work_time(), f"[User {user_id}] sai ratelimiterist edasi")
 
             method, path, headers, body = random.choice(requests_data)
             url = base_url + path
@@ -143,9 +140,6 @@ def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data
                 do_request(session,user_id,url,method,path,headers,body)
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
-
-            
-        print(f"[User {user_id}] finished")
 
     finally:
         session.close()
