@@ -146,8 +146,8 @@ def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data
 
 def stats_printer(stop_time):
     global start_time
-    while time.time() < stop_time and (stop_time-time.time())>10:
-        time.sleep(10)
+    while time.time() < stop_time and (stop_time-time.time())>5:
+        time.sleep(5)
 
         with stats_lock:
             if total_requests == 0:
