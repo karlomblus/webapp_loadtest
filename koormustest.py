@@ -26,7 +26,7 @@ class RateLimiter:
     def __init__(self, rate_per_sec):
         self.interval = 1.0 / rate_per_sec
         self.lock = threading.Lock()
-        self.last = 0.0
+        self.last = time.time()
 
     def wait(self,maxsleep):
         with self.lock:
