@@ -1,0 +1,8 @@
+GET /app/info/health {}
+POST /app/api/proceedings {'content-type':'application/json'} {"offset":0,"limit":100}
+POST /app/api/assets {'content-type':'application/json'} {"arhiivist":"false","offset":0,"limit":100,"orderBy":"varaKood","orderByDir":"ASC"}
+POST /app/api/contracts {'content-type':'application/json'} {"offset":0,"limit":100,"sortBy":"lepinguKood","sortDir":"ASC"}
+#POST /app/api/balances {'content-type':'application/json'} {"arhiivis":"false","varaLiik":"MAA"}
+#POST /app/api/organisations/proceedings {'content-type':'application/json'}
+GET /app-frontend/assets/index-C2mACsIw.js {}
+GET /app/info {}
