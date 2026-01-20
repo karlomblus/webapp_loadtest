@@ -1,16 +1,18 @@
 import argparse
+import ast
+import random
 import threading
 import time
-import random
-import requests
-import ast
-from queue import Queue
 import warnings
+from queue import Queue
+
+import requests
 
 start_time = time.time()
 stats_lock = threading.Lock()
 total_requests = 0
 total_duration = 0.0  # sekundites
+
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -22,44 +24,42 @@ def parse_args():
     return p.parse_args()
 
 
-
 class RateLimiter:
     def __init__(self, rate_per_sec):
         self.interval = 1.0 / rate_per_sec
         self.lock = threading.Lock()
-        #self.last = time.time()
+        # self.last = time.time()
         self.next_time = time.monotonic()  # järgmise lubatud päringu aeg
 
-    def wait(self, stop_time,debugdata):
-        #print(debugdata,f"ratelimiter alustab runtime_left={stop_time-time.time()}")
+    def wait(self, stop_time, debugdata):
+        # print(debugdata,f"ratelimiter alustab runtime_left={stop_time-time.time()}")
         now = time.monotonic()
         timeout = max(0, stop_time - now)
         acquired = self.lock.acquire(timeout=timeout)
         if not acquired:
-            #print(debugdata,f"ratelimiter loobub luku ootamisest runtime_left={stop_time-time.time()}")
+            # print(debugdata,f"ratelimiter loobub luku ootamisest runtime_left={stop_time-time.time()}")
             return False  # ei saanud lukku, aeg läbi
         try:
-            #print(debugdata,f"ratelimiter sai luku runtime_left={stop_time-time.time()}")
-            if stop_time<time.time():
-                #print(debugdata,f"ratelimiter loobub runtime_left={stop_time-time.time()}")
+            # print(debugdata,f"ratelimiter sai luku runtime_left={stop_time-time.time()}")
+            if stop_time < time.time():
+                # print(debugdata,f"ratelimiter loobub runtime_left={stop_time-time.time()}")
                 return False
             now = time.monotonic()
             # kui järgmine slot on juba möödas, tee kohe
             if now >= self.next_time:
                 self.next_time = now + self.interval
-                #print(debugdata,f"ratelimiter: tee kohe runtime_left={stop_time-time.time()}")
+                # print(debugdata,f"ratelimiter: tee kohe runtime_left={stop_time-time.time()}")
                 return True
 
             # kui järgmine slot on tulevikus
             sleep_time = self.next_time - now
 
-            #print(debugdata,f"ratelimite: sleebin {sleep_time} runtime_left={stop_time-time.time()}")
+            # print(debugdata,f"ratelimite: sleebin {sleep_time} runtime_left={stop_time-time.time()}")
             time.sleep(sleep_time)
             self.next_time += self.interval
             return True
         finally:
             self.lock.release()
-
 
 
 def load_requests(filename):
@@ -69,84 +69,103 @@ def load_requests(filename):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            
-            print("Parsime requesti rida: ",line)
-            parts = line.split(maxsplit=2) # jagame kolmeks jupiks  METHOD, PATH, ÜLEJÄÄNUD
+
+            print("Parsime requesti rida: ", line)
+            parts = line.split(
+                maxsplit=2
+            )  # jagame kolmeks jupiks  METHOD, PATH, ÜLEJÄÄNUD
             method = parts[0].upper()
             path = parts[1]
             # kuna header on ainult ühekihiline json, siis post data splitime selle järgi
-            parts2=parts[2].split('}', maxsplit=1)
-            headers = ast.literal_eval(parts2[0]+'}') if len(parts2) > 0 else {}
+            parts2 = parts[2].split("}", maxsplit=1)
+            headers = ast.literal_eval(parts2[0] + "}") if len(parts2) > 0 else {}
             body = parts2[1][1:] if len(parts2) > 1 else None
-            #print("Parsime requesti: ",method," ",path,"\nHeader:",headers,"\n'",body,"'\n\n")
+            # print("Parsime requesti: ",method," ",path,"\nHeader:",headers,"\n'",body,"'\n\n")
             reqs.append((method, path, headers, body))
     return reqs
+
 
 def work_time():
     global start_time
     elapsed_time = time.time() - start_time
     hours, remainder = divmod(elapsed_time, 3600)
     minutes, seconds = divmod(remainder, 60)
-    return f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
+    return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
 
 
-def do_request(session,user_id,url,method,path,headers,body):
-    global total_requests,total_duration
+def do_request(session, user_id, url, method, path, headers, body):
+    global total_requests, total_duration
     start = time.perf_counter()
     if method == "GET":
         r = session.get(url, headers=headers)
     else:
         r = session.post(url, headers=headers, data=body)
     duration = time.perf_counter() - start
-    print(work_time(),user_id, method, path, r.status_code)
+    print(work_time(), user_id, method, path, r.status_code)
 
     with stats_lock:
         total_requests += 1
         total_duration += duration
-                
-    if r.status_code!=200:
+
+    if r.status_code != 200:
         print("VIGA!!")
-        print("Request: ",method," ",path,"\nHeader:",headers,"\n"+body+"\n"+ r.text+"\n")
+        print(
+            "Request: ",
+            method,
+            " ",
+            path,
+            "\nHeader:",
+            headers,
+            "\n" + body + "\n" + r.text + "\n",
+        )
 
 
-def user_worker(    user_id,    base_url,  startup_requests_data,  requests_data,    rate_limiter,    stop_time,    verify_ssl,):
-    #print(work_time(), f"[User {user_id}] start")
+def user_worker(
+    user_id,
+    base_url,
+    startup_requests_data,
+    requests_data,
+    rate_limiter,
+    stop_time,
+    verify_ssl,
+):
+    # print(work_time(), f"[User {user_id}] start")
     session = requests.Session()
     session.verify = verify_ssl
-    
-    if not session.verify: # kui oleme kontrolli välja lülitanud, ei taha hoiatusi ka
-        warnings.filterwarnings('ignore', message='Unverified HTTPS request')
-    
+
+    if not session.verify:  # kui oleme kontrolli välja lülitanud, ei taha hoiatusi ka
+        warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 
     try:
-        #TODO: startup
+        # TODO: startup
 
         while time.time() < stop_time:
-            #print(work_time(), f"[User {user_id}] runtime left: stop_time-time=",(stop_time-time.time()))
-            #print("runtime left: stop_time-time=",(stop_time-time.time()))
-            #rate_limiter.wait(stop_time-time.time()) # rate limit peab olema alguses, muidu teeb iga kasutaja kohe esimese päringu ära
-            #if time.time() > stop_time:
+            # print(work_time(), f"[User {user_id}] runtime left: stop_time-time=",(stop_time-time.time()))
+            # print("runtime left: stop_time-time=",(stop_time-time.time()))
+            # rate_limiter.wait(stop_time-time.time()) # rate limit peab olema alguses, muidu teeb iga kasutaja kohe esimese päringu ära
+            # if time.time() > stop_time:
             #    print(work_time(), f"[User {user_id}] over time")
             #    return
             now = time.monotonic()
             if now >= stop_time:
                 break
-            if not rate_limiter.wait(stop_time,(work_time()+ f" [User {user_id}]")):
+            if not rate_limiter.wait(stop_time, (work_time() + f" [User {user_id}]")):
                 break
 
             method, path, headers, body = random.choice(requests_data)
             url = base_url + path
             try:
-                do_request(session,user_id,url,method,path,headers,body)
+                do_request(session, user_id, url, method, path, headers, body)
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
 
     finally:
         session.close()
 
+
 def stats_printer(stop_time):
     global start_time
-    while time.time() < stop_time and (stop_time-time.time())>5:
+    while time.time() < stop_time and (stop_time - time.time()) > 5:
         time.sleep(5)
 
         with stats_lock:
@@ -154,13 +173,12 @@ def stats_printer(stop_time):
                 continue
             avg = total_duration / total_requests
             elapsed_time = time.time() - start_time
-            avg2=  total_requests/elapsed_time
+            avg2 = total_requests / elapsed_time
 
         print(
             f"[STATS] requests={total_requests}, "
-            f"avg_duration_ms={avg*1000:.2f}, total avg={avg2:.1f} req/s"
+            f"avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"
         )
-
 
 
 def main():
@@ -169,40 +187,50 @@ def main():
     startup_requests_data = load_requests("startup_requests.txt")
     if not startup_requests_data:
         raise RuntimeError("startup_requests.txt on tühi")
-    requests_data = load_requests("request.txt")
+    requests_data = load_requests("requests.txt")
     if not requests_data:
-        raise RuntimeError("request.txt on tühi")
-
+        raise RuntimeError("requests.txt on tühi")
 
     rate_limiter = RateLimiter(args.n)
     stop_time = time.time() + args.t
-    
 
     threads = []
 
     for i in range(args.c):
         t = threading.Thread(
             target=user_worker,
-            args=( i, args.u.rstrip("/"),  startup_requests_data,    requests_data,   rate_limiter,   stop_time,  not args.k,      ),
+            args=(
+                i,
+                args.u.rstrip("/"),
+                startup_requests_data,
+                requests_data,
+                rate_limiter,
+                stop_time,
+                not args.k,
+            ),
             daemon=True,
         )
         t.start()
         threads.append(t)
 
-    stats_thread = threading.Thread(     target=stats_printer,      args=(stop_time,),     daemon=True,)
+    stats_thread = threading.Thread(
+        target=stats_printer,
+        args=(stop_time,),
+        daemon=True,
+    )
     stats_thread.start()
-
 
     for t in threads:
         t.join()
 
-
-
     with stats_lock:
         avg = (total_duration / total_requests) if total_requests else 0
-        elapsed_time = time.time() - start_time # kogu programmi tööaeg
-        avg2= total_requests/elapsed_time
-        print(    f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg*1000:.2f}, total avg={avg2:.1f} req/s")
+        elapsed_time = time.time() - start_time  # kogu programmi tööaeg
+        avg2 = total_requests / elapsed_time
+        print(
+            f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"
+        )
+
 
 if __name__ == "__main__":
     main()
