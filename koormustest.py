@@ -14,7 +14,6 @@ total_requests = 0
 total_duration = 0.0  # sekundites
 status_counts = {}    # kõigi staatuskoodide hulk eraldi
 
-
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("-u", required=True, help="Serveri base URL")
@@ -182,6 +181,7 @@ def stats_printer(stop_time):
             avg = total_duration / total_requests
             elapsed_time = time.monotonic() - start_time
             avg2 = total_requests / elapsed_time
+
             per_status = dict(status_counts)
         status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items())   )
         print(
@@ -189,6 +189,11 @@ def stats_printer(stop_time):
             f"avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"
         )
         print(f"         status breakdown: {status_details}")
+        successful_requests = sum(
+            count for status, count in per_status.items() if 200 <= status < 300
+        )
+        success_rate = successful_requests / elapsed_time if elapsed_time > 0 else 0
+        print(f"         success (2xx) avg={success_rate:.1f} req/s")
 
 
 def main():
@@ -237,10 +242,16 @@ def main():
         avg = (total_duration / total_requests) if total_requests else 0
         elapsed_time = time.monotonic() - start_time  # kogu programmi tööaeg
         avg2 = total_requests / elapsed_time
+
         per_status = dict(status_counts)
     status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items())    )
     print(f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"    )
     print(f"              status breakdown: {status_details}")
+    successful_requests = sum(
+        count for status, count in per_status.items() if 200 <= status < 300
+    )
+    success_rate = successful_requests / elapsed_time if elapsed_time > 0 else 0
+    print(f"              success (2xx) avg={success_rate:.1f} req/s")
 
 
 if __name__ == "__main__":
