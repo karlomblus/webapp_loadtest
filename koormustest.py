@@ -12,6 +12,7 @@ start_time = time.monotonic()
 stats_lock = threading.Lock()
 total_requests = 0
 total_duration = 0.0  # sekundites
+status_counts = {}    # kõigi staatuskoodide hulk eraldi
 
 
 def parse_args():
@@ -112,6 +113,7 @@ def do_request(session, user_id, url, method, path, headers, body):
     with stats_lock:
         total_requests += 1
         total_duration += duration
+        status_counts[r.status_code] = status_counts.get(r.status_code, 0) + 1
 
     if r.status_code != 200:
         print("VIGA!!")
@@ -180,11 +182,13 @@ def stats_printer(stop_time):
             avg = total_duration / total_requests
             elapsed_time = time.monotonic() - start_time
             avg2 = total_requests / elapsed_time
-
+            per_status = dict(status_counts)
+        status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items())   )
         print(
             f"[STATS] requests={total_requests}, "
             f"avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"
         )
+        print(f"         status breakdown: {status_details}")
 
 
 def main():
@@ -233,9 +237,10 @@ def main():
         avg = (total_duration / total_requests) if total_requests else 0
         elapsed_time = time.monotonic() - start_time  # kogu programmi tööaeg
         avg2 = total_requests / elapsed_time
-        print(
-            f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"
-        )
+        per_status = dict(status_counts)
+    status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items())    )
+    print(f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"    )
+    print(f"              status breakdown: {status_details}")
 
 
 if __name__ == "__main__":
