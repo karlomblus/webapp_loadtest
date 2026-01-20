@@ -4,11 +4,11 @@ import random
 import threading
 import time
 import warnings
-from queue import Queue
 
+# from queue import Queue
 import requests
 
-start_time = time.time()
+start_time = time.monotonic()
 stats_lock = threading.Lock()
 total_requests = 0
 total_duration = 0.0  # sekundites
@@ -35,13 +35,15 @@ class RateLimiter:
         # print(debugdata,f"ratelimiter alustab runtime_left={stop_time-time.time()}")
         now = time.monotonic()
         timeout = max(0, stop_time - now)
+        #print("lukustamise timeout:", timeout)
         acquired = self.lock.acquire(timeout=timeout)
         if not acquired:
             # print(debugdata,f"ratelimiter loobub luku ootamisest runtime_left={stop_time-time.time()}")
             return False  # ei saanud lukku, aeg läbi
+        sleep_time = 0
         try:
             # print(debugdata,f"ratelimiter sai luku runtime_left={stop_time-time.time()}")
-            if stop_time < time.time():
+            if stop_time < time.monotonic():
                 # print(debugdata,f"ratelimiter loobub runtime_left={stop_time-time.time()}")
                 return False
             now = time.monotonic()
@@ -58,6 +60,10 @@ class RateLimiter:
             time.sleep(sleep_time)
             self.next_time += self.interval
             return True
+        except OverflowError as e:
+            print(
+                f"[RateLimiter] OverflowError during time.sleep sleep_time={sleep_time}: {e}"
+            )
         finally:
             self.lock.release()
 
@@ -70,7 +76,7 @@ def load_requests(filename):
             if not line or line.startswith("#"):
                 continue
 
-            print("Parsime requesti rida: ", line)
+            #print("Parsime requesti rida: ", line)
             parts = line.split(
                 maxsplit=2
             )  # jagame kolmeks jupiks  METHOD, PATH, ÜLEJÄÄNUD
@@ -87,7 +93,7 @@ def load_requests(filename):
 
 def work_time():
     global start_time
-    elapsed_time = time.time() - start_time
+    elapsed_time = time.monotonic() - start_time
     hours, remainder = divmod(elapsed_time, 3600)
     minutes, seconds = divmod(remainder, 60)
     return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
@@ -129,7 +135,7 @@ def user_worker(
     stop_time,
     verify_ssl,
 ):
-    # print(work_time(), f"[User {user_id}] start")
+    #print(work_time(), f"[User {user_id}] start")
     session = requests.Session()
     session.verify = verify_ssl
 
@@ -139,7 +145,7 @@ def user_worker(
     try:
         # TODO: startup
 
-        while time.time() < stop_time:
+        while time.monotonic() < stop_time:
             # print(work_time(), f"[User {user_id}] runtime left: stop_time-time=",(stop_time-time.time()))
             # print("runtime left: stop_time-time=",(stop_time-time.time()))
             # rate_limiter.wait(stop_time-time.time()) # rate limit peab olema alguses, muidu teeb iga kasutaja kohe esimese päringu ära
@@ -165,14 +171,14 @@ def user_worker(
 
 def stats_printer(stop_time):
     global start_time
-    while time.time() < stop_time and (stop_time - time.time()) > 5:
+    while time.monotonic() < stop_time and (stop_time - time.monotonic()) > 5:
         time.sleep(5)
 
         with stats_lock:
             if total_requests == 0:
                 continue
             avg = total_duration / total_requests
-            elapsed_time = time.time() - start_time
+            elapsed_time = time.monotonic() - start_time
             avg2 = total_requests / elapsed_time
 
         print(
@@ -192,7 +198,7 @@ def main():
         raise RuntimeError("requests.txt on tühi")
 
     rate_limiter = RateLimiter(args.n)
-    stop_time = time.time() + args.t
+    stop_time = time.monotonic() + args.t
 
     threads = []
 
@@ -225,7 +231,7 @@ def main():
 
     with stats_lock:
         avg = (total_duration / total_requests) if total_requests else 0
-        elapsed_time = time.time() - start_time  # kogu programmi tööaeg
+        elapsed_time = time.monotonic() - start_time  # kogu programmi tööaeg
         avg2 = total_requests / elapsed_time
         print(
             f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"
