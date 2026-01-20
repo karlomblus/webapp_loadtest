@@ -185,8 +185,8 @@ def main():
     args = parse_args()
 
     startup_requests_data = load_requests("startup_requests.txt")
-    if not startup_requests_data:
-        raise RuntimeError("startup_requests.txt on tühi")
+    # if not startup_requests_data:
+    #    raise RuntimeError("startup_requests.txt on tühi")
     requests_data = load_requests("requests.txt")
     if not requests_data:
         raise RuntimeError("requests.txt on tühi")
