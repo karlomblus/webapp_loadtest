@@ -186,7 +186,8 @@ def stats_printer(stop_time):
         status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items())   )
         print(
             f"[STATS] requests={total_requests}, "
-            f"avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"
+            f"avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s  "
+            "runtime:", elapsed_time_tostr(elapsed_time)
         )
         print(f"         status breakdown: {status_details}")
         successful_requests = sum(
@@ -210,6 +211,8 @@ def main():
     stop_time = time.monotonic() + args.t
 
     threads = []
+
+    print("[INFO] Start time: " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
     for i in range(args.c):
         t = threading.Thread(
@@ -245,7 +248,7 @@ def main():
 
         per_status = dict(status_counts)
     status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items())    )
-    print(f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s"    )
+    print(f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s   runtime:", elapsed_time_tostr(elapsed_time)    )
     print(f"              status breakdown: {status_details}")
     successful_requests = sum(
         count for status, count in per_status.items() if 200 <= status < 300
@@ -253,6 +256,27 @@ def main():
     success_rate = successful_requests / elapsed_time if elapsed_time > 0 else 0
     print(f"              success (2xx) avg={success_rate:.1f} req/s")
 
+    print("[INFO] End time: " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+
+
+def elapsed_time_tostr(elapsed_time):
+    time_parts = []
+    days = int(elapsed_time // 86400)
+    hours = int((elapsed_time % 86400) // 3600)
+    minutes = int((elapsed_time % 3600) // 60)
+    seconds = int(elapsed_time % 60)
+
+    if days > 0:
+        time_parts.append(f"{days} päeva")
+    if hours > 0:
+        time_parts.append(f"{hours:02}h")
+    if minutes > 0:
+        time_parts.append(f"{minutes:02}min")
+    if seconds > 0:
+        time_parts.append(f"{seconds:02}s")
+    if not time_parts:
+        time_parts.append("0s")
+    return(" ".join(time_parts))
 
 if __name__ == "__main__":
     main()
