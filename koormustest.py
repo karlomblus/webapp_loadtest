@@ -4,6 +4,7 @@ import random
 import threading
 import time
 import warnings
+import sys
 
 # from queue import Queue
 import requests
@@ -15,13 +16,23 @@ total_duration = 0.0  # sekundites
 status_counts = {}    # kõigi staatuskoodide hulk eraldi
 
 def parse_args():
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(add_help=False)
+    p.add_argument(
+        "-h",
+        action="store_true",
+        help="Näita kõikide võtmete kirjeldusi ja lõpeta programm",
+    )
     p.add_argument("-u", required=True, help="Serveri base URL")
     p.add_argument("-c", type=int, required=True, help="Kasutajate arv")
     p.add_argument("-n", type=int, required=True, help="Päringuid sekundis kokku")
     p.add_argument("-t", type=int, required=True, help="Testi kestus sekundites")
+    p.add_argument("-f", default="requests.txt", help='Päringute faili nimi (vaikimisi "requests.txt")')
     p.add_argument("-k", action="store_true", help="Ignoreeri SSL vigu")
-    return p.parse_args()
+    args = p.parse_args()
+    if args.h:
+        p.print_help()
+        sys.exit(0)
+    return args
 
 
 class RateLimiter:
@@ -203,9 +214,9 @@ def main():
     startup_requests_data = load_requests("startup_requests.txt")
     # if not startup_requests_data:
     #    raise RuntimeError("startup_requests.txt on tühi")
-    requests_data = load_requests("requests.txt")
+    requests_data = load_requests(args.f)
     if not requests_data:
-        raise RuntimeError("requests.txt on tühi")
+        raise RuntimeError(f"{args.f} on tühi")
 
     rate_limiter = RateLimiter(args.n)
     stop_time = time.monotonic() + args.t
