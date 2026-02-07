@@ -16,7 +16,9 @@ total_duration = 0.0  # sekundites
 status_counts = {}    # kõigi staatuskoodide hulk eraldi
 
 def parse_args():
-    p = argparse.ArgumentParser(add_help=False)
+    usage = "python koormustest.py -u URL -c THREAD_COUNT -n TOTAL_RATE -t SECONDS [-f requests.txt] [-k]"
+    sample = "Näide: python koormustest.py -u https://example.com -c 20 -n 10 -t 30"
+    p = argparse.ArgumentParser(add_help=False, usage=usage, epilog=sample)
     p.add_argument(
         "-h",
         action="store_true",
