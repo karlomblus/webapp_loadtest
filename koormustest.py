@@ -219,7 +219,7 @@ def stats_printer(stop_time):
         )
         print(f"         status breakdown: {status_details}")
         successful_requests = sum(
-            count for status, count in per_status.items() if 200 <= status < 300
+            count for status, count in per_status.items() if isinstance(status, int) and 200 <= status < 300
         )
         success_rate = successful_requests / elapsed_time if elapsed_time > 0 else 0
         print(f"         success (2xx) avg={success_rate:.1f} req/s")
@@ -287,7 +287,7 @@ def main():
     print(f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f} (min={cur_min*1000:.1f}, max={cur_max*1000:.1f}), total avg={avg2:.1f} req/s   runtime:", elapsed_time_tostr(elapsed_time)    )
     print(f"              status breakdown: {status_details}")
     successful_requests = sum(
-        count for status, count in per_status.items() if 200 <= status < 300
+        count for status, count in per_status.items() if isinstance(status, int) and 200 <= status < 300
     )
     success_rate = successful_requests / elapsed_time if elapsed_time > 0 else 0
     print(f"              success (2xx) avg={success_rate:.1f} req/s")
