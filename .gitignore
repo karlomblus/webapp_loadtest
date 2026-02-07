@@ -1,3 +1,4 @@
-request.txt
-requests.txt
+request*.txt
+!requests.txt.sample
+.idea
 startup_requests.txt

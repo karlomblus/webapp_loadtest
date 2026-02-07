@@ -9,6 +9,7 @@ mitte benchmark vaid pigem tavalise kasutajakoormuse simuleerimine
 
 python3.9 koormustest.py -u https://rakenduse.url/ -c 10 -n 1 -t 3 -k
 
+-u serveri baas-URL
 
 -c kasutajate hulk
 
@@ -16,13 +17,24 @@ python3.9 koormustest.py -u https://rakenduse.url/ -c 10 -n 1 -t 3 -k
 
 -t testi tööaeg sekundites
 
+-f päringute fail (vaikimisi requests.txt)
+
 -k ignoreerib SSL vigu
+
+-h abiinfo
+
+
+# Näited
+
+`python3.9 koormustest.py -u https://example.com -c 20 -n 10 -t 30`
+
+`python3.9 koormustest.py -u https://example.com -c 5 -n 2 -t 10 -f requests.txt -k`
 
 
 # Conffail
 
 
-Igal päringul valitakse request.txt failist suvaline rida, mille järgi tehakse päring rakendusele
+Igal päringul valitakse päringute failist (vaikimisi `requests.txt`) suvaline rida, mille järgi tehakse päring rakendusele
 
 Faili formaat:
 
