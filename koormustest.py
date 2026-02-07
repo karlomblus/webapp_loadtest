@@ -13,6 +13,8 @@ start_time = time.monotonic()
 stats_lock = threading.Lock()
 total_requests = 0
 total_duration = 0.0  # sekundites
+min_duration = float('inf')
+max_duration = 0.0
 status_counts = {}    # kõigi staatuskoodide hulk eraldi
 
 def parse_args():
@@ -29,6 +31,8 @@ def parse_args():
     p.add_argument("-n", type=int, required=True, help="Päringuid sekundis kokku")
     p.add_argument("-t", type=int, required=True, help="Testi kestus sekundites")
     p.add_argument("-f", default="requests.txt", help='Päringute faili nimi (vaikimisi "requests.txt")')
+    p.add_argument("-s", default="startup_requests.txt", help='Startup päringute faili nimi (vaikimisi "startup_requests.txt")')
+    p.add_argument("--timeout", type=float, default=30.0, help="Päringu timeout sekundites (vaikimisi 30.0)")
     p.add_argument("-k", action="store_true", help="Ignoreeri SSL vigu")
     args = p.parse_args()
     if args.h:
@@ -112,32 +116,34 @@ def work_time():
     return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
 
 
-def do_request(session, user_id, url, method, path, headers, body):
-    global total_requests, total_duration
+def do_request(session, user_id, url, method, path, headers, body, timeout):
+    global total_requests, total_duration, min_duration, max_duration
     start = time.perf_counter()
-    if method == "GET":
-        r = session.get(url, headers=headers)
-    else:
-        r = session.post(url, headers=headers, data=body)
-    duration = time.perf_counter() - start
-    print(work_time(), user_id, method, path, r.status_code)
+    try:
+        if method == "GET":
+            r = session.get(url, headers=headers, timeout=timeout)
+        else:
+            r = session.post(url, headers=headers, data=body, timeout=timeout)
+        duration = time.perf_counter() - start
+        print(work_time(), user_id, method, path, r.status_code)
 
-    with stats_lock:
-        total_requests += 1
-        total_duration += duration
-        status_counts[r.status_code] = status_counts.get(r.status_code, 0) + 1
+        with stats_lock:
+            total_requests += 1
+            total_duration += duration
+            min_duration = min(min_duration, duration)
+            max_duration = max(max_duration, duration)
+            status_counts[r.status_code] = status_counts.get(r.status_code, 0) + 1
 
-    if r.status_code != 200:
-        print("VIGA!!")
-        print(
-            "Request: ",
-            method,
-            " ",
-            path,
-            "\nHeader:",
-            headers,
-            "\n" + body + "\n" + r.text + "\n",
-        )
+        if r.status_code != 200:
+            print(f"VIGA!! Staatus: {r.status_code}")
+            print("Request: ",method,    path,  "\nHeader:",  headers, "\n" + (body if body else "") + "\n" + r.text[:200] + "...\n" )
+    except requests.exceptions.RequestException as e:
+        duration = time.perf_counter() - start
+        print(f"{work_time()} {user_id} {method} {path} ERROR: {e}")
+        with stats_lock:
+            total_requests += 1
+            total_duration += duration
+            status_counts["ERROR"] = status_counts.get("ERROR", 0) + 1
 
 
 def user_worker(
@@ -148,6 +154,7 @@ def user_worker(
     rate_limiter,
     stop_time,
     verify_ssl,
+    timeout,
 ):
     #print(work_time(), f"[User {user_id}] start")
     session = requests.Session()
@@ -157,7 +164,13 @@ def user_worker(
         warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 
     try:
-        # TODO: startup
+        # Startup päringud
+        for method, path, headers, body in startup_requests_data:
+            url = base_url + path
+            try:
+                do_request(session, user_id, url, method, path, headers, body, timeout)
+            except Exception as e:
+                print(f"[User {user_id}] startup request error: {e}")
 
         while time.monotonic() < stop_time:
             # print(work_time(), f"[User {user_id}] runtime left: stop_time-time=",(stop_time-time.time()))
@@ -175,7 +188,7 @@ def user_worker(
             method, path, headers, body = random.choice(requests_data)
             url = base_url + path
             try:
-                do_request(session, user_id, url, method, path, headers, body)
+                do_request(session, user_id, url, method, path, headers, body, timeout)
             except Exception as e:
                 print(f"[User {user_id}] request error: {e}")
 
@@ -192,14 +205,16 @@ def stats_printer(stop_time):
             if total_requests == 0:
                 continue
             avg = total_duration / total_requests
+            cur_min = min_duration if min_duration != float('inf') else 0
+            cur_max = max_duration
             elapsed_time = time.monotonic() - start_time
             avg2 = total_requests / elapsed_time
 
             per_status = dict(status_counts)
-        status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items())   )
+        status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items(), key=lambda x: str(x[0]))   )
         print(
             f"[STATS] requests={total_requests}, "
-            f"avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s  "
+            f"avg_duration_ms={avg * 1000:.2f} (min={cur_min*1000:.1f}, max={cur_max*1000:.1f}), total avg={avg2:.1f} req/s  "
             "runtime:", elapsed_time_tostr(elapsed_time)
         )
         print(f"         status breakdown: {status_details}")
@@ -213,9 +228,14 @@ def stats_printer(stop_time):
 def main():
     args = parse_args()
 
-    startup_requests_data = load_requests("startup_requests.txt")
-    # if not startup_requests_data:
-    #    raise RuntimeError("startup_requests.txt on tühi")
+    startup_requests_data = []
+    if args.s:
+        try:
+            startup_requests_data = load_requests(args.s)
+        except FileNotFoundError:
+            if args.s != "startup_requests.txt": # kui kasutaja ise määras ja ei leitud
+                print(f"[WARNING] Startup faili '{args.s}' ei leitud.")
+    
     requests_data = load_requests(args.f)
     if not requests_data:
         raise RuntimeError(f"{args.f} on tühi")
@@ -238,6 +258,7 @@ def main():
                 rate_limiter,
                 stop_time,
                 not args.k,
+                args.timeout,
             ),
             daemon=True,
         )
@@ -256,12 +277,14 @@ def main():
 
     with stats_lock:
         avg = (total_duration / total_requests) if total_requests else 0
+        cur_min = min_duration if min_duration != float('inf') else 0
+        cur_max = max_duration
         elapsed_time = time.monotonic() - start_time  # kogu programmi tööaeg
         avg2 = total_requests / elapsed_time
 
         per_status = dict(status_counts)
-    status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items())    )
-    print(f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f}, total avg={avg2:.1f} req/s   runtime:", elapsed_time_tostr(elapsed_time)    )
+    status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items(), key=lambda x: str(x[0]))    )
+    print(f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f} (min={cur_min*1000:.1f}, max={cur_max*1000:.1f}), total avg={avg2:.1f} req/s   runtime:", elapsed_time_tostr(elapsed_time)    )
     print(f"              status breakdown: {status_details}")
     successful_requests = sum(
         count for status, count in per_status.items() if 200 <= status < 300
