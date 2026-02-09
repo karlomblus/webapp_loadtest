@@ -38,6 +38,14 @@ def parse_args():
     if args.h:
         p.print_help()
         sys.exit(0)
+    if args.c < 1:
+        p.error("-c peab olema >= 1")
+    if args.n < 1:
+        p.error("-n peab olema >= 1")
+    if args.t < 1:
+        p.error("-t peab olema >= 1")
+    if args.timeout <= 0:
+        p.error("--timeout peab olema > 0")
     return args
 
 
@@ -208,7 +216,7 @@ def stats_printer(stop_time):
             cur_min = min_duration if min_duration != float('inf') else 0
             cur_max = max_duration
             elapsed_time = time.monotonic() - start_time
-            avg2 = total_requests / elapsed_time
+            avg2 = total_requests / elapsed_time if elapsed_time > 0 else 0
 
             per_status = dict(status_counts)
         status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items(), key=lambda x: str(x[0]))   )
@@ -219,7 +227,7 @@ def stats_printer(stop_time):
         )
         print(f"         status breakdown: {status_details}")
         successful_requests = sum(
-            count for status, count in per_status.items() if 200 <= status < 300
+            count for status, count in per_status.items() if isinstance(status, int) and 200 <= status < 300
         )
         success_rate = successful_requests / elapsed_time if elapsed_time > 0 else 0
         print(f"         success (2xx) avg={success_rate:.1f} req/s")
@@ -281,14 +289,14 @@ def main():
         cur_min = min_duration if min_duration != float('inf') else 0
         cur_max = max_duration
         elapsed_time = time.monotonic() - start_time  # kogu programmi tööaeg
-        avg2 = total_requests / elapsed_time
+        avg2 = total_requests / elapsed_time if elapsed_time > 0 else 0
 
         per_status = dict(status_counts)
     status_details = ", ".join( f"{status}={count}" for status, count in sorted(per_status.items(), key=lambda x: str(x[0]))    )
     print(f"\n[FINAL STATS] requests={total_requests}, avg_duration_ms={avg * 1000:.2f} (min={cur_min*1000:.1f}, max={cur_max*1000:.1f}), total avg={avg2:.1f} req/s   runtime:", elapsed_time_tostr(elapsed_time)    )
     print(f"              status breakdown: {status_details}")
     successful_requests = sum(
-        count for status, count in per_status.items() if 200 <= status < 300
+        count for status, count in per_status.items() if isinstance(status, int) and 200 <= status < 300
     )
     success_rate = successful_requests / elapsed_time if elapsed_time > 0 else 0
     print(f"              success (2xx) avg={success_rate:.1f} req/s")
