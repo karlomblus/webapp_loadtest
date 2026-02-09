@@ -235,8 +235,9 @@ def main():
         except FileNotFoundError:
             if args.s != "startup_requests.txt": # kui kasutaja ise määras ja ei leitud
                 print(f"[WARNING] Startup faili '{args.s}' ei leitud.")
-    
+    print("Reading requests file: "+args.f)
     requests_data = load_requests(args.f)
+    #print("DEBUG:",requests_data)
     if not requests_data:
         raise RuntimeError(f"{args.f} on tühi")
 
